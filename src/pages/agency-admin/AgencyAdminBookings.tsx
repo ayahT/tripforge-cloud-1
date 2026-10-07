@@ -8,7 +8,7 @@ import {
 import { useState, useMemo, useEffect } from 'react';
 import {
   eachDayOfInterval, parseISO, format, isSameDay, isToday, isThisWeek,
-  startOfMonth, endOfMonth, isWithinInterval,
+  startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay,
 } from 'date-fns';
 import { Agency } from '@/types/agency';
 import { useAgencyBookings } from '@/hooks/use-agency-admin';
@@ -86,12 +86,29 @@ const AgencyAdminBookings = () => {
 
   // Calendar day groups
   const dayMap = useMemo(() => {
-    const map: Record<StatusKey, Date[]> = { pending: [], confirmed: [], completed: [], cancelled: [] };
+    const map: Record<string, Date[]> = {
+      pending: [], confirmed: [], completed: [], cancelled: [],
+      pending_start: [], pending_middle: [], pending_end: [],
+      confirmed_start: [], confirmed_middle: [], confirmed_end: [],
+      completed_start: [], completed_middle: [], completed_end: [],
+      cancelled_start: [], cancelled_middle: [], cancelled_end: [],
+    };
+    
     filtered.forEach((b: any) => {
       try {
-        const days = eachDayOfInterval({ start: parseISO(b.pickup_date), end: parseISO(b.return_date) });
-        const key = (b.status as StatusKey) in map ? (b.status as StatusKey) : 'pending';
-        map[key].push(...days);
+        const start = parseISO(b.pickup_date);
+        const end = parseISO(b.return_date);
+        const days = eachDayOfInterval({ start, end });
+        const key = (b.status as StatusKey) in STATUS_STYLES ? (b.status as StatusKey) : 'pending';
+        
+        if (days.length === 1) {
+          map[key].push(days[0]);
+        } else if (days.length > 1) {
+          map[`${key}_start`].push(days[0]);
+          map[`${key}_end`].push(days[days.length - 1]);
+          // Middle days are intentionally omitted from visual calendar highlights
+          // per user request ("i want only the start and end")
+        }
       } catch {}
     });
     return map;
@@ -101,8 +118,11 @@ const AgencyAdminBookings = () => {
     if (!selectedDay) return [];
     return filtered.filter((b: any) => {
       try {
-        const days = eachDayOfInterval({ start: parseISO(b.pickup_date), end: parseISO(b.return_date) });
-        return days.some((d) => isSameDay(d, selectedDay));
+        const start = startOfDay(parseISO(b.pickup_date));
+        const end = endOfDay(parseISO(b.return_date));
+        // We still consider the middle days "unavailable" / occupied
+        // so clicking on a middle day should still show the booking
+        return isWithinInterval(selectedDay, { start, end });
       } catch { return false; }
     });
   }, [selectedDay, filtered]);
@@ -341,12 +361,28 @@ const AgencyAdminBookings = () => {
                     modifiers={{
                       confirmed: dayMap.confirmed, pending: dayMap.pending,
                       completed: dayMap.completed, cancelled: dayMap.cancelled,
+                      confirmed_start: dayMap.confirmed_start, confirmed_middle: dayMap.confirmed_middle, confirmed_end: dayMap.confirmed_end,
+                      pending_start: dayMap.pending_start, pending_middle: dayMap.pending_middle, pending_end: dayMap.pending_end,
+                      completed_start: dayMap.completed_start, completed_middle: dayMap.completed_middle, completed_end: dayMap.completed_end,
+                      cancelled_start: dayMap.cancelled_start, cancelled_middle: dayMap.cancelled_middle, cancelled_end: dayMap.cancelled_end,
                     }}
                     modifiersClassNames={{
                       confirmed: 'bg-accent/30 text-accent-foreground font-semibold',
                       pending: 'bg-amber-500/30 text-foreground font-semibold',
                       completed: 'bg-emerald-500/30 text-foreground font-semibold',
                       cancelled: 'bg-destructive/30 text-destructive font-semibold line-through',
+                      
+                      confirmed_start: 'bg-accent/30 text-accent-foreground font-semibold',
+                      confirmed_end: 'bg-accent/30 text-accent-foreground font-semibold',
+                      
+                      pending_start: 'bg-amber-500/30 text-foreground font-semibold',
+                      pending_end: 'bg-amber-500/30 text-foreground font-semibold',
+                      
+                      completed_start: 'bg-emerald-500/30 text-foreground font-semibold',
+                      completed_end: 'bg-emerald-500/30 text-foreground font-semibold',
+                      
+                      cancelled_start: 'bg-destructive/30 text-destructive font-semibold line-through',
+                      cancelled_end: 'bg-destructive/30 text-destructive font-semibold line-through',
                     }}
                     className={cn('p-3 pointer-events-auto rounded-md border border-border')}
                   />

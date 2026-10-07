@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAgencyVehicles, Vehicle } from '@/hooks/use-vehicles';
 import CreateVehicleDialog from '@/components/agency-admin/CreateVehicleDialog';
+import CreateReservationDialog from '@/components/agency-admin/CreateReservationDialog';
 import EditVehicleDialog from '@/components/agency-admin/EditVehicleDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -88,6 +89,7 @@ const AgencyAdminVehicles = () => {
             <Sparkles className="h-4 w-4" />
             {seeding ? 'Seeding...' : 'Seed dummy vehicles'}
           </Button>
+          <CreateReservationDialog agencyId={agency.id} />
           <CreateVehicleDialog agencyId={agency.id} />
         </div>
       </motion.div>

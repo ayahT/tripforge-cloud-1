@@ -137,15 +137,34 @@ const VehiclePricingDialog = ({ vehicle, open, onOpenChange }: Props) => {
   if (!vehicle) return null;
 
   // Build day-level sets for calendar highlighting
-  const bookedDays: Date[] = bookings.flatMap((b: any) => {
+  const bookedMap = { base: [] as Date[], start: [] as Date[], middle: [] as Date[], end: [] as Date[] };
+  bookings.forEach((b: any) => {
     try {
-      return eachDayOfInterval({ start: parseISO(b.pickup_date), end: parseISO(b.return_date) });
-    } catch { return []; }
+      const start = parseISO(b.pickup_date);
+      const end = parseISO(b.return_date);
+      const days = eachDayOfInterval({ start, end });
+      if (days.length === 1) {
+        bookedMap.base.push(days[0]);
+      } else if (days.length > 1) {
+        bookedMap.start.push(days[0]);
+        bookedMap.end.push(days[days.length - 1]);
+      }
+    } catch {}
   });
-  const blockedDays: Date[] = blocked.flatMap((b) => {
+
+  const blockedMap = { base: [] as Date[], start: [] as Date[], middle: [] as Date[], end: [] as Date[] };
+  blocked.forEach((b) => {
     try {
-      return eachDayOfInterval({ start: parseISO(b.start_date), end: parseISO(b.end_date) });
-    } catch { return []; }
+      const start = parseISO(b.start_date);
+      const end = parseISO(b.end_date);
+      const days = eachDayOfInterval({ start, end });
+      if (days.length === 1) {
+        blockedMap.base.push(days[0]);
+      } else if (days.length > 1) {
+        blockedMap.start.push(days[0]);
+        blockedMap.end.push(days[days.length - 1]);
+      }
+    } catch {}
   });
 
   return (
@@ -182,10 +201,19 @@ const VehiclePricingDialog = ({ vehicle, open, onOpenChange }: Props) => {
                 numberOfMonths={2}
                 selected={[]}
                 onSelect={() => {}}
-                modifiers={{ booked: bookedDays, blocked: blockedDays }}
+                modifiers={{
+                  booked: bookedMap.base, booked_start: bookedMap.start, booked_middle: bookedMap.middle, booked_end: bookedMap.end,
+                  blocked: blockedMap.base, blocked_start: blockedMap.start, blocked_middle: blockedMap.middle, blocked_end: blockedMap.end
+                }}
                 modifiersClassNames={{
                   booked: 'bg-accent/30 text-accent-foreground font-semibold',
+                  booked_start: 'bg-accent/30 text-accent-foreground font-semibold',
+                  booked_middle: 'bg-accent/30 text-accent-foreground font-semibold',
+                  booked_end: 'bg-accent/30 text-accent-foreground font-semibold',
                   blocked: 'bg-destructive/30 text-destructive font-semibold line-through',
+                  blocked_start: 'bg-destructive/30 text-destructive font-semibold line-through',
+                  blocked_middle: 'bg-destructive/30 text-destructive font-semibold line-through',
+                  blocked_end: 'bg-destructive/30 text-destructive font-semibold line-through',
                 }}
                 className={cn('p-3 pointer-events-auto rounded-md border border-border')}
               />
